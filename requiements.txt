@@ -2,5 +2,6 @@ streamlit
 pandas
 json
 datetime
-plotly
+plotly>=5.0.0
+
 
