@@ -3,6 +3,7 @@ pandas
 json
 datetime
 plotly
+plotly.express
 
 
 
