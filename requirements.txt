@@ -3,8 +3,9 @@ pandas
 datetime
 plotly
 plotly.express
-streamlit_gsheets
+st-gsheets-connection
 os
 PIL
 
 random
+
