@@ -2,40 +2,45 @@ import streamlit as st
 import pandas as pd
 import json
 import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import numpy as np
-from datetime import datetime, timedelta
-import calendar
-from collections import Counter
+from streamlit_gsheets import GSheetsConnection
+import os
+from PIL import Image
+import random
 
 # Set page config
 st.set_page_config(
     page_title="Blog Posts Timeline Dashboard",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"  # Changed to collapsed
 )
 
 # Custom CSS for better styling
 st.markdown("""
 <style>
+
     .main-header {
         font-size: 3rem;
         color: #1f77b4;
         text-align: center;
-        margin-bottom: 2rem;
+        margin-top: -1rem !important;
+        margin-bottom: 0.5rem !important;
         font-weight: bold;
+        padding-top: 0rem !important;
     }
+
     .metric-card {
         background-color: #f0f2f6;
         padding: 1rem;
         border-radius: 10px;
         border-left: 5px solid #1f77b4;
     }
-    .sidebar .sidebar-content {
-        background-color: #f8f9fa;
+
+    /* Reduce space everywhere */
+    .element-container {
+        margin-bottom: 0.2rem !important;
     }
+
     .stTabs [data-baseweb="tab-list"] {
         gap: 2px;
     }
@@ -44,20 +49,43 @@ st.markdown("""
         padding-left: 20px;
         padding-right: 20px;
     }
+
+
+    /* Target Streamlit tab indicator/underline */
+    .stTabs [data-baseweb="tab-highlight"] {
+        background-color: #28a745 !important;
+    }
+
+        /* Active tab font color */
+    .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
+        color: #90EE90 !important;  /* Light green for active tab */
+    }
+
+    /* Inactive tab font color */
+    .stTabs [data-baseweb="tab-list"] button {
+        color: #FFFFFF !important;  /* Pale green for inactive tabs */
+    }
+
+    /* More specific targeting */
+    div[data-testid="stMultiSelect"] span[data-baseweb="tag"] {
+        background-color: #28a745 !important;
+        border-color: #28a745 !important;
+    }
+
+
+}
+
 </style>
 """, unsafe_allow_html=True)
 
 
 @st.cache_data
-def load_blog_data(uploaded_file):
+def load_blog_data():
     """Load and process blog data from JSON file"""
     try:
-        if uploaded_file is not None:
-            blog_data = json.load(uploaded_file)
-        else:
-            # Try to load from default file
-            with open('blog_data_scrape.json', 'r', encoding='utf-8') as f:
-                blog_data = json.load(f)
+        # Load from default file
+        with open('blog_data_scrape.json', 'r', encoding='utf-8') as f:
+            blog_data = json.load(f)
 
         # Convert to DataFrame
         df = pd.DataFrame(blog_data)
@@ -77,6 +105,19 @@ def load_blog_data(uploaded_file):
         return df
     except Exception as e:
         st.error(f"Error loading data: {e}")
+        return None
+
+
+@st.cache_data
+def load_google_sheets_data():
+    """Load data from Google Sheets"""
+    try:
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        df = conn.read(
+            spreadsheet="https://docs.google.com/spreadsheets/d/1HQS04Y-e9hpYvDUOSSbOD-iAc0iLpo_Gks13DBWW3QY/edit?usp=sharing")
+        return df
+    except Exception as e:
+        st.error(f"Error loading Google Sheets data: {e}")
         return None
 
 
@@ -106,8 +147,9 @@ def create_timeline_chart(timeline_df):
         timeline_df,
         x='date_only',
         y='post_count',
-        title="📊 Daily Blog Posts Timeline (Bar Chart)",
-        labels={'date_only': 'Date', 'post_count': 'Number of Posts'}
+        title="📊 Blog Timeline",
+        labels={'date_only': 'Date', 'post_count': 'Number of Posts'},
+        color_discrete_sequence=['#E0E26A']
     )
 
     # Apply black font to all text elements
@@ -118,7 +160,7 @@ def create_timeline_chart(timeline_df):
             color="black"  # This sets ALL text to black
         ),
         title_font_size=20,
-        height=500,
+        height=320,
         showlegend=False,
         hovermode='x unified',
         xaxis=dict(
@@ -169,7 +211,8 @@ def create_monthly_summary(df):
         title="📅 Monthly Blog Posts Summary",
         labels={'year_month': 'Month', 'post_count': 'Number of Posts'},
         color='post_count',
-        color_continuous_scale=[[0, '#013220'], [0.5, '#7CB342'], [1, '#FFF176']]  # Very dark green → Light green → Light yellow
+        color_continuous_scale=[[0, '#013220'], [0.5, '#7CB342'], [1, '#FFF176']]
+        # Very dark green → Light green → Light yellow
 
     )
 
@@ -181,7 +224,7 @@ def create_monthly_summary(df):
     )
 
     fig.update_layout(
-        height=400
+        height=350
     )
 
     return fig
@@ -202,31 +245,22 @@ def create_weekday_analysis(df):
         color_continuous_scale=[[0, '#013220'], [0.5, '#7CB342'], [1, '#FFF176']]
     )
 
-    fig.update_layout(height=400)
+    fig.update_layout(height=320)
 
     return fig
 
 
 def main():
     # Header
-    st.markdown('<h1 class="main-header">📊 熱烈祝賀隊長松田里奈擔任宮崎大使為推廣家鄉出一份力</h1>', unsafe_allow_html=True)
-
-    # Sidebar
-    st.sidebar.title("🎛️ Dashboard Controls")
-
-    # File upload
-    uploaded_file = st.sidebar.file_uploader(
-        "Upload JSON file",
-        type=['json'],
-        help="Upload your blog_data.json file"
-    )
+    st.markdown('<h1 class="main-header">Matsuri-blog.com</h1>',
+                unsafe_allow_html=True)
 
     # Load data
-    df = load_blog_data(uploaded_file)
+    df = load_blog_data()
 
     if df is None or df.empty:
         st.error(
-            "❌ No data loaded. Please upload a valid JSON file or ensure 'blog_data.json' exists in the current directory.")
+            "❌ No data loaded. Please ensure 'blog_data_scrape.json' exists in the current directory.")
         st.info("💡 The JSON file should contain blog data with 'date', 'title', and 'page' fields.")
         return
 
@@ -238,64 +272,47 @@ def main():
         st.warning("⚠️ No data available.")
         return
 
-    # Key metrics
-    col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-        st.metric(
-            label="📚 Total Posts",
-            value=len(df_filtered)
-        )
-
-    with col2:
-        st.metric(
-            label="📅 Active Days",
-            value=df_filtered['date_only'].nunique()
-        )
-
-    with col3:
-        avg_posts = len(df_filtered) / df_filtered['date_only'].nunique()
-        st.metric(
-            label="📊 Avg Posts/Day",
-            value=f"{avg_posts:.1f}"
-        )
-
-    with col4:
-        max_posts = df_filtered.groupby('date_only').size().max()
-        st.metric(
-            label="🔥 Max Posts/Day",
-            value=max_posts
-        )
-
     # Create timeline
     timeline_df = create_daily_timeline(df_filtered)
 
-    # Tabs for different views
-    tab1, tab2, tab3, tab4, tab5= st.tabs([
+    tab1, tab2, tab3, tab5, tab6, tab7, tab8 = st.tabs([
         "📈 Timeline", "📊 Monthly Summary",
-        "🗓️ Weekday Analysis", "📋 Data Table", "📋Total data"
+        "🗓️ Weekday Analysis", "📋 Total data", "▶️ Jobs Archive", "📸 Photo Gallery", "⚠️ Disclaimer"
     ])
 
     with tab1:
-        st.subheader("Daily Posts Timeline")
-
         # Timeline chart (always bar chart)
         timeline_fig = create_timeline_chart(timeline_df)
         st.plotly_chart(timeline_fig, use_container_width=True)
+
+        # Key metrics
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric(
+                label="📚 Total Posts",
+                value=len(df_filtered)
+            )
+
+        with col3:
+            avg_posts = len(df_filtered) / df_filtered['date_only'].nunique()
+            st.metric(
+                label="📊 Avg Posts/Day",
+                value=f"{avg_posts:.1f}"
+            )
+
+        with col4:
+            max_posts = df_filtered.groupby('date_only').size().max()
+            st.metric(
+                label="🔥 Max Posts/Day",
+                value=max_posts
+            )
 
         # Additional timeline statistics
         col1, col2 = st.columns(2)
 
         with col1:
-            st.subheader("📊 Timeline Statistics")
-            zero_days = (timeline_df['post_count'] == 0).sum()
-            active_days = (timeline_df['post_count'] > 0).sum()
             max_day = timeline_df.loc[timeline_df['post_count'].idxmax(), 'date_only'].strftime('%Y-%m-%d')
-
-            st.write(f"**Days with posts:** {active_days}")
-            st.write(f"**Days without posts:** {zero_days}")
-            st.write(f"**Most active day:** {max_day}")
-            st.write(f"**Posts on most active day:** {timeline_df['post_count'].max()}")
 
         with col2:
             st.subheader("🔥 Top 10 Most Active Days")
@@ -305,7 +322,6 @@ def main():
             st.dataframe(top_days, hide_index=True)
 
     with tab2:
-        st.subheader("Monthly Summary")
         monthly_fig = create_monthly_summary(df_filtered)
         st.plotly_chart(monthly_fig, use_container_width=True)
 
@@ -315,11 +331,9 @@ def main():
         monthly_stats = monthly_stats[['year_month', 'post_count']].sort_values('post_count', ascending=False)
         monthly_stats.columns = ['Month', 'Posts']
 
-        st.subheader("📊 Monthly Statistics")
         st.dataframe(monthly_stats, hide_index=True)
 
     with tab3:
-        st.subheader("Weekday Analysis")
         weekday_fig = create_weekday_analysis(df_filtered)
         st.plotly_chart(weekday_fig, use_container_width=True)
 
@@ -328,59 +342,46 @@ def main():
         weekday_df = pd.DataFrame({
             'Day': weekday_stats.index,
             'Posts': weekday_stats.values,
-            'Percentage': (weekday_stats.values / len(df_filtered) * 100).round(1)
+            '%': (weekday_stats.values / len(df_filtered) * 100).round(1)
         })
 
-        st.subheader("📊 Weekday Statistics")
         st.dataframe(weekday_df, hide_index=True)
 
-    with tab4:
-        st.subheader("Raw Data")
-
-        # Search functionality
-        search_term = st.text_input("🔍 Search in titles:")
-
-        if search_term:
-            mask = df_filtered['title'].str.contains(search_term, case=False, na=False)
-            display_df = df_filtered[mask]
-        else:
-            display_df = df_filtered
-
-        # Display options
-        col1, col2 = st.columns(2)
-        with col1:
-            show_columns = st.multiselect(
-                "Select columns to display:",
-                options=['date', 'title', 'page', 'href', 'weekday', 'month_name'],
-                default=['date', 'title', 'page', 'href']
-            )
-
-        with col2:
-            rows_to_show = st.selectbox(
-                "Rows to display:",
-                options=[10, 25, 50, 100, len(display_df)],
-                index=1
-            )
-
-        # Display filtered data
-        if show_columns:
-            st.dataframe(
-                display_df[show_columns].head(rows_to_show),
-                hide_index=True,
-                use_container_width=True
-            )
-
-        # Download button
-        csv = display_df.to_csv(index=False)
-        st.download_button(
-            label="📥 Download filtered data as CSV",
-            data=csv,
-            file_name=f"blog_data_filtered_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime="text/csv"
-        )
+    # with tab4:
+    #     # Search functionality
+    #     search_term = st.text_input("🔍 Search in titles:")
+    #
+    #     if search_term:
+    #         mask = df_filtered['title'].str.contains(search_term, case=False, na=False)
+    #         display_df = df_filtered[mask]
+    #     else:
+    #         display_df = df_filtered
+    #
+    #     # Display options
+    #     col1, col2 = st.columns(2)
+    #     with col1:
+    #         show_columns = st.multiselect(
+    #             "Select columns to display:",
+    #             options=['date', 'title', 'page', 'href', 'weekday', 'month_name'],
+    #             default=['date', 'title', 'page', 'href']
+    #         )
+    #
+    #     with col2:
+    #         rows_to_show = st.selectbox(
+    #             "Rows to display:",
+    #             options=[10, 25, 50, 100, len(df)],
+    #             index=1
+    #         )
+    #
+    #     # Display filtered data
+    #     if show_columns:
+    #         st.dataframe(
+    #             display_df[show_columns].head(rows_to_show),
+    #             hide_index=True,
+    #             use_container_width=True
+    #         )
 
     with tab5:
-        st.header("📋 Total data summarize")
 
         try:
             # Load and display JSON data
@@ -396,13 +397,13 @@ def main():
                 col1, col2, col3, col4 = st.columns(4)
 
                 with col1:
-                    st.metric("total_blogs", data.get("total_blogs", "N/A"))
+                    st.metric("total blogs count", data.get("total_blogs", "N/A"))
 
                 with col2:
-                    st.metric("total_characters", f"{data.get('total_characters', 0):,}")
+                    st.metric("total characters", f"{data.get('total_characters', 0):,}")
 
                 with col3:
-                    st.metric("total_images", f"{data.get('total_images', 0):,}")
+                    st.metric("total images", f"{data.get('total_images', 0):,}")
 
                 # Display averages
                 col5, col6 = st.columns(2)
@@ -419,14 +420,136 @@ def main():
             st.error(f"❌ Error loading data: {e}")
             st.write("Debug info - please check your JSON file structure")
 
+    with tab6:
+
+        # Add refresh button
+        if st.button("🔄 Refresh"):
+            st.cache_data.clear()
+
+        # Load and display Google Sheets data
+        sheets_df = load_google_sheets_data()
+
+        if sheets_df is not None:
+            # Search functionality for Google Sheets data
+            search_term_sheets = st.text_input("🔍 Search in data:")
+
+            if search_term_sheets:
+                # Search across all string columns
+                string_columns = sheets_df.select_dtypes(include=['object']).columns
+                mask = sheets_df[string_columns].apply(
+                    lambda x: x.astype(str).str.contains(search_term_sheets, case=False, na=False)
+                ).any(axis=1)
+                display_sheets_df = sheets_df[mask]
+            else:
+                display_sheets_df = sheets_df
+
+            # Display options
+            col1, col2 = st.columns(2)
+            with col1:
+                if len(sheets_df.columns) > 0:
+                    show_columns_sheets = st.multiselect(
+                        "Select columns to display:",
+                        options=list(sheets_df.columns),
+                        default=list(sheets_df.columns)[:5] if len(sheets_df.columns) >= 5 else list(sheets_df.columns)
+                    )
+                else:
+                    show_columns_sheets = []
+
+            with col2:
+                rows_to_show_sheets = st.selectbox(
+                    "Rows to display:",
+                    options=[10, 25, 50, 100, len(display_sheets_df)],
+                    index=1,
+                    key="sheets_rows"
+                )
+
+            # Display the data
+            if show_columns_sheets:
+                st.dataframe(
+                    display_sheets_df[show_columns_sheets].head(rows_to_show_sheets),
+                    hide_index=True,
+                    use_container_width=True
+                )
+
+            else:
+                st.warning("Please select at least one column to display.")
+        else:
+            st.error("❌ Failed to load Google Sheets data. Please check your connection and permissions.")
+
+    with tab7:
+        display_mode = "Grid View"
+        photo_folder = "matsuri_blog_photo"
+
+        try:
+            # Check if directory exists
+            if not os.path.exists(photo_folder):
+                st.error(f"❌ Directory '{photo_folder}' not found. Please create the directory and add some photos.")
+                st.info("💡 Supported formats: JPG, JPEG, PNG, GIF, BMP, WEBP")
+                return
+
+            # Get all image files
+            supported_formats = ('.jpg')
+            image_files = []
+
+            for file in os.listdir(photo_folder):
+                if file.lower().endswith(supported_formats):
+                    image_files.append(os.path.join(photo_folder, file))
+
+            if not image_files:
+                st.warning(f"⚠️ No image files found in '{photo_folder}' directory.")
+                st.info("💡 Please add some photos to the directory. Supported formats: JPG, JPEG, PNG, GIF, BMP, WEBP")
+                return
+
+            # Shuffle/randomize options
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🎲 Shuffle Photos"):
+                    if 'shuffled_images' not in st.session_state:
+                        st.session_state.shuffled_images = image_files.copy()
+                    random.shuffle(st.session_state.shuffled_images)
+                    st.rerun()
+
+            with col2:
+                photos_per_row = 5
+
+            # Use shuffled images if available, otherwise use original list
+            display_images = st.session_state.get('shuffled_images', image_files)
+            display_images = display_images[:20]
+
+            # Display modes
+            if display_mode == "Grid View":
+                # Grid layout
+                cols = st.columns(photos_per_row)
+                for idx, image_path in enumerate(display_images):
+                    with cols[idx % photos_per_row]:
+                        try:
+                            image = Image.open(image_path)
+                            st.image(image, use_container_width=True)
+
+                        except Exception as e:
+                            st.error(f"❌ Error loading {image_path}: {e}")
+
+        except Exception as e:
+            st.error(f"❌ Unexpected error: {e}")
+
+    with tab8:
+        # Main disclaimer content
+        st.write(
+            "Matsublogdotcom, mainly used for recommendation/data searching. Prediction on future formation and comments on members/songs/albums/goods are not included. ")
+        st.write(
+            "All data used are from the internet. The content and data in this fan-made database are intended for informational and entertainment purposes only. ")
+        st.write(
+            "They do not represent official statements, endorsements, or affiliations with Sakurazaka46, nor Matsuda Rina. ")
+        st.write("All trademarks and copyrighted materials belong to their respective owners. ")
+
     # Footer
     min_date = df['datetime'].min().date()
     max_date = df['datetime'].max().date()
     st.markdown("---")
     st.markdown(
         "📊 **Blog Timeline Dashboard** | "
-        f"Data range: {min_date} to {max_date} | "
-        f"Total posts analyzed: {len(df)}"
+        f"Data range: {min_date} to {max_date} "
+        "| Made with love and blessings"
     )
 
 
