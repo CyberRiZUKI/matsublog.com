@@ -2,9 +2,6 @@ import streamlit as st
 import pandas as pd
 import json
 import plotly.express as px
-import os
-from PIL import Image
-import random
 
 # Set page config
 st.set_page_config(
@@ -256,13 +253,12 @@ def main():
     # Create timeline
     timeline_df = create_daily_timeline(df_filtered)
 
-    # REMOVED TAB6 - Now only 6 tabs instead of 7
-    tab1, tab2, tab3, tab5, tab7, tab8 = st.tabs([
+    # REMOVED TAB6 AND TAB7 - Now only 5 tabs
+    tab1, tab2, tab3, tab5, tab8 = st.tabs([
         "📈 Timeline",
         "📊 Monthly Summary",
         "🗓️ Weekday Analysis",
         "📋 Total data",
-        "📸 Photo Gallery",
         "⚠️ Disclaimer"
     ])
 
@@ -371,64 +367,7 @@ def main():
             st.error(f"❌ Error loading data: {e}")
             st.write("Debug info - please check your JSON file structure")
 
-    # TAB6 COMPLETELY REMOVED - No more Google Sheets functionality
-
-    with tab7:
-        display_mode = "Grid View"
-        photo_folder = "matsuri_blog_photo"
-
-        try:
-            # Check if directory exists
-            if not os.path.exists(photo_folder):
-                st.error(f"❌ Directory '{photo_folder}' not found. Please create the directory and add some photos.")
-                st.info("💡 Supported formats: JPG, JPEG, PNG, GIF, BMP, WEBP")
-                return
-
-            # Get all image files
-            supported_formats = ('.jpg')
-            image_files = []
-
-            for file in os.listdir(photo_folder):
-                if file.lower().endswith(supported_formats):
-                    image_files.append(os.path.join(photo_folder, file))
-
-            if not image_files:
-                st.warning(f"⚠️ No image files found in '{photo_folder}' directory.")
-                st.info("💡 Please add some photos to the directory. Supported formats: JPG, JPEG, PNG, GIF, BMP, WEBP")
-                return
-
-            # Shuffle/randomize options
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("🎲 Shuffle Photos"):
-                    if 'shuffled_images' not in st.session_state:
-                        st.session_state.shuffled_images = image_files.copy()
-                    random.shuffle(st.session_state.shuffled_images)
-                    st.rerun()
-
-            with col2:
-                photos_per_row = 5
-
-            # Use shuffled images if available, otherwise use original list
-            display_images = st.session_state.get('shuffled_images', image_files)
-            display_images = display_images[:20]
-
-            # Display modes
-            if display_mode == "Grid View":
-                # Grid layout
-                cols = st.columns(photos_per_row)
-                for idx, image_path in enumerate(display_images):
-                    with cols[idx % photos_per_row]:
-                        try:
-                            image = Image.open(image_path)
-                            st.image(image, use_container_width=True)
-
-                        except Exception as e:
-                            st.error(f"❌ Error loading {image_path}: {e}")
-
-        except Exception as e:
-            st.error(f"❌ Unexpected error: {e}")
-
+    # TAB6 AND TAB7 COMPLETELY REMOVED - No more Google Sheets or Photo Gallery
 
     with tab8:
         # Main disclaimer content
