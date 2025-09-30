@@ -3,9 +3,8 @@ pandas
 datetime
 plotly
 plotly.express
-os
 PIL
-random
+
 
 
 
