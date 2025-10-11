@@ -2,6 +2,10 @@ import streamlit as st
 import pandas as pd
 import json
 import plotly.express as px
+# from streamlit_gsheets import GSheetsConnection
+import os
+from PIL import Image
+import random
 
 # Set page config
 st.set_page_config(
@@ -46,12 +50,13 @@ st.markdown("""
         padding-right: 20px;
     }
 
+
     /* Target Streamlit tab indicator/underline */
     .stTabs [data-baseweb="tab-highlight"] {
         background-color: #28a745 !important;
     }
 
-    /* Active tab font color */
+        /* Active tab font color */
     .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
         color: #90EE90 !important;  /* Light green for active tab */
     }
@@ -66,6 +71,9 @@ st.markdown("""
         background-color: #28a745 !important;
         border-color: #28a745 !important;
     }
+
+
+}
 
 </style>
 """, unsafe_allow_html=True)
@@ -97,6 +105,19 @@ def load_blog_data():
         return df
     except Exception as e:
         st.error(f"Error loading data: {e}")
+        return None
+
+
+@st.cache_data
+def load_google_sheets_data():
+    """Load data from Google Sheets"""
+    try:
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        df = conn.read(
+            spreadsheet="https://docs.google.com/spreadsheets/d/1HQS04Y-e9hpYvDUOSSbOD-iAc0iLpo_Gks13DBWW3QY/edit?usp=sharing")
+        return df
+    except Exception as e:
+        st.error(f"Error loading Google Sheets data: {e}")
         return None
 
 
@@ -192,6 +213,7 @@ def create_monthly_summary(df):
         color='post_count',
         color_continuous_scale=[[0, '#013220'], [0.5, '#7CB342'], [1, '#FFF176']]
         # Very dark green → Light green → Light yellow
+
     )
 
     # Use update_xaxes() instead of update_xaxis()
@@ -253,13 +275,9 @@ def main():
     # Create timeline
     timeline_df = create_daily_timeline(df_filtered)
 
-    # REMOVED TAB6 AND TAB7 - Now only 5 tabs
-    tab1, tab2, tab3, tab5, tab8 = st.tabs([
-        "📈 Timeline",
-        "📊 Monthly Summary",
-        "🗓️ Weekday Analysis",
-        "📋 Total data",
-        "⚠️ Disclaimer"
+    tab1, tab2, tab3, tab5, tab7, tab8 = st.tabs([
+        "📈 Timeline", "📊 Monthly Summary",
+        "🗓️ Weekday Analysis", "📋 Total data", "📸 Photo Gallery", "⚠️ Disclaimer"
     ])
 
     with tab1:
@@ -329,7 +347,42 @@ def main():
 
         st.dataframe(weekday_df, hide_index=True)
 
+    # with tab4:
+    #     # Search functionality
+    #     search_term = st.text_input("🔍 Search in titles:")
+    #
+    #     if search_term:
+    #         mask = df_filtered['title'].str.contains(search_term, case=False, na=False)
+    #         display_df = df_filtered[mask]
+    #     else:
+    #         display_df = df_filtered
+    #
+    #     # Display options
+    #     col1, col2 = st.columns(2)
+    #     with col1:
+    #         show_columns = st.multiselect(
+    #             "Select columns to display:",
+    #             options=['date', 'title', 'page', 'href', 'weekday', 'month_name'],
+    #             default=['date', 'title', 'page', 'href']
+    #         )
+    #
+    #     with col2:
+    #         rows_to_show = st.selectbox(
+    #             "Rows to display:",
+    #             options=[10, 25, 50, 100, len(df)],
+    #             index=1
+    #         )
+    #
+    #     # Display filtered data
+    #     if show_columns:
+    #         st.dataframe(
+    #             display_df[show_columns].head(rows_to_show),
+    #             hide_index=True,
+    #             use_container_width=True
+    #         )
+
     with tab5:
+
         try:
             # Load and display JSON data
             with open("blog_data_counts.json", "r", encoding="utf-8") as f:
@@ -367,17 +420,127 @@ def main():
             st.error(f"❌ Error loading data: {e}")
             st.write("Debug info - please check your JSON file structure")
 
-    # TAB6 AND TAB7 COMPLETELY REMOVED - No more Google Sheets or Photo Gallery
+    # with tab6:
+    #
+    #     # Add refresh button
+    #     if st.button("🔄 Refresh"):
+    #         st.cache_data.clear()
+    #
+    #     # Load and display Google Sheets data
+    #     sheets_df = load_google_sheets_data()
+    #
+    #     if sheets_df is not None:
+    #         # Search functionality for Google Sheets data
+    #         search_term_sheets = st.text_input("🔍 Search in data:")
+    #
+    #         if search_term_sheets:
+    #             # Search across all string columns
+    #             string_columns = sheets_df.select_dtypes(include=['object']).columns
+    #             mask = sheets_df[string_columns].apply(
+    #                 lambda x: x.astype(str).str.contains(search_term_sheets, case=False, na=False)
+    #             ).any(axis=1)
+    #             display_sheets_df = sheets_df[mask]
+    #         else:
+    #             display_sheets_df = sheets_df
+    #
+    #         # Display options
+    #         col1, col2 = st.columns(2)
+    #         with col1:
+    #             if len(sheets_df.columns) > 0:
+    #                 show_columns_sheets = st.multiselect(
+    #                     "Select columns to display:",
+    #                     options=list(sheets_df.columns),
+    #                     default=list(sheets_df.columns)[:5] if len(sheets_df.columns) >= 5 else list(sheets_df.columns)
+    #                 )
+    #             else:
+    #                 show_columns_sheets = []
+    #
+    #         with col2:
+    #             rows_to_show_sheets = st.selectbox(
+    #                 "Rows to display:",
+    #                 options=[10, 25, 50, 100, len(display_sheets_df)],
+    #                 index=1,
+    #                 key="sheets_rows"
+    #             )
+    #
+    #         # Display the data
+    #         if show_columns_sheets:
+    #             st.dataframe(
+    #                 display_sheets_df[show_columns_sheets].head(rows_to_show_sheets),
+    #                 hide_index=True,
+    #                 use_container_width=True
+    #             )
+    #
+    #         else:
+    #             st.warning("Please select at least one column to display.")
+    #     else:
+    #         st.error("❌ Failed to load Google Sheets data. Please check your connection and permissions.")
+
+    with tab7:
+        display_mode = "Grid View"
+        photo_folder = "matsuri_blog_photo"
+
+        try:
+            # Check if directory exists
+            if not os.path.exists(photo_folder):
+                st.error(f"❌ Directory '{photo_folder}' not found. Please create the directory and add some photos.")
+                st.info("💡 Supported formats: JPG, JPEG, PNG, GIF, BMP, WEBP")
+                return
+
+            # Get all image files
+            supported_formats = ('.jpg')
+            image_files = []
+
+            for file in os.listdir(photo_folder):
+                if file.lower().endswith(supported_formats):
+                    image_files.append(os.path.join(photo_folder, file))
+
+            if not image_files:
+                st.warning(f"⚠️ No image files found in '{photo_folder}' directory.")
+                st.info("💡 Please add some photos to the directory. Supported formats: JPG, JPEG, PNG, GIF, BMP, WEBP")
+                return
+
+            # Shuffle/randomize options
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🎲 Shuffle Photos"):
+                    if 'shuffled_images' not in st.session_state:
+                        st.session_state.shuffled_images = image_files.copy()
+                    random.shuffle(st.session_state.shuffled_images)
+                    st.rerun()
+
+            with col2:
+                photos_per_row = 5
+
+            # Use shuffled images if available, otherwise use original list
+            display_images = st.session_state.get('shuffled_images', image_files)
+            display_images = display_images[:20]
+
+            # Display modes
+            if display_mode == "Grid View":
+                # Grid layout
+                cols = st.columns(photos_per_row)
+                for idx, image_path in enumerate(display_images):
+                    with cols[idx % photos_per_row]:
+                        try:
+                            image = Image.open(image_path)
+                            st.image(image, use_container_width=True)
+
+                        except Exception as e:
+                            st.error(f"❌ Error loading {image_path}: {e}")
+
+        except Exception as e:
+            st.error(f"❌ Unexpected error: {e}")
 
     with tab8:
         # Main disclaimer content
         st.write(
-            "Matsublogdotcom, mainly used for recommendation/data searching. Prediction on future formation and comments on members/songs/albums/goods are not included.")
+            "Matsublogdotcom, mainly used for recommendation/data searching. Prediction on future formation and comments on members/songs/albums/goods are not included. ")
         st.write(
-            "All data used are from the internet. The content and data in this fan-made database are intended for informational and entertainment purposes only.")
+            "All data used are from the internet. The content and data in this fan-made database are intended for informational and entertainment purposes only. ")
         st.write(
-            "They do not represent official statements, endorsements, or affiliations with Sakurazaka46, nor Matsuda Rina.")
-        st.write("All trademarks and copyrighted materials belong to their respective owners.")
+            "They do not represent official statements, endorsements, or affiliations with Sakurazaka46, nor Matsuda Rina. ")
+        st.write("All trademarks and copyrighted materials belong to their respective owners. ")
 
     # Footer
     min_date = df['datetime'].min().date()
