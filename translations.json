@@ -42,7 +42,7 @@
     "metric_avg_chars": "Avg Characters/Blog",
     "metric_avg_images": "Avg Images/Blog",
 
-    "button_shuffle": "🎲 Shuffle Photos",
+    "button_shuffle": "🎲 Photo Gacha!",
 
     "error_no_data": "❌ No data loaded. Please ensure 'blog_data_scrape.json' exists in the current directory.",
     "error_directory_not_found": "❌ Directory '{folder}' not found. Please create the directory and add some photos.",
@@ -138,7 +138,7 @@
 
     "footer_dashboard": "📊 **ブログタイムラインダッシュボード**",
     "footer_data_range": "データ範囲: {min_date} から {max_date}",
-    "footer_made_with": "愛と祝福を込めて作成",
+    "footer_made_with": "愛と祝福を込めて",
 
     "debug_info": "デバッグ情報 - JSONファイル構造を確認してください"
   }
