@@ -23,8 +23,6 @@ def load_translations():
     try:
         with open('translations.json', 'r', encoding='utf-8') as f:
             data = json.load(f)
-            st.success("✅ translations.json loaded successfully!")
-            return data
     except json.JSONDecodeError as e:
         st.error(f"❌ JSON format error: {e}")
         return {"en": {}, "ja": {}}
