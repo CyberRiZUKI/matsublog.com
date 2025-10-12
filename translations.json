@@ -1,0 +1,145 @@
+{
+  "en": {
+    "page_title": "Blog Posts Timeline Dashboard",
+    "main_header": "Matsuri-blog.com",
+    "language_toggle": "日本語",
+
+    "tab_timeline": "📈 Timeline",
+    "tab_monthly": "📊 Monthly Summary",
+    "tab_weekday": "🗓️ Weekday Analysis",
+    "tab_total": "📋 Total data",
+    "tab_photo": "📸 Photo Gallery",
+    "tab_disclaimer": "⚠️ Disclaimer",
+
+    "timeline_title": "📊 Blog Timeline",
+    "timeline_x_label": "Date",
+    "timeline_y_label": "Number of Posts",
+    "timeline_hover_date": "Date:",
+    "timeline_hover_posts": "Posts:",
+
+    "monthly_title": "📅 Monthly Blog Posts Summary",
+    "monthly_x_label": "Month",
+    "monthly_y_label": "Number of Posts",
+
+    "weekday_title": "📊 Posts by Day of Week",
+    "weekday_x_label": "Day of Week",
+    "weekday_y_label": "Number of Posts",
+
+    "metric_total_posts": "📚 Total Posts",
+    "metric_avg_posts": "📊 Avg Posts/Day",
+    "metric_max_posts": "🔥 Max Posts/Day",
+    "top_active_days": "🔥 Top 10 Most Active Days",
+
+    "column_date": "Date",
+    "column_posts": "Posts",
+    "column_month": "Month",
+    "column_day": "Day",
+    "column_percentage": "%",
+
+    "metric_total_blogs": "total blogs count",
+    "metric_total_chars": "total characters",
+    "metric_total_images": "total images",
+    "metric_avg_chars": "Avg Characters/Blog",
+    "metric_avg_images": "Avg Images/Blog",
+
+    "button_shuffle": "🎲 Shuffle Photos",
+
+    "error_no_data": "❌ No data loaded. Please ensure 'blog_data_scrape.json' exists in the current directory.",
+    "error_directory_not_found": "❌ Directory '{folder}' not found. Please create the directory and add some photos.",
+    "error_no_images": "⚠️ No image files found in '{folder}' directory.",
+    "error_loading_image": "❌ Error loading {path}: {error}",
+    "error_json_not_found": "❌ blog_data.json file not found. Please run the scraping script first.",
+    "error_loading_data": "❌ Error loading data: {error}",
+    "error_json_list": "JSON data is a list, not a dictionary. Please check your JSON structure.",
+    "error_unexpected": "❌ Unexpected error: {error}",
+
+    "info_json_structure": "💡 The JSON file should contain blog data with 'date', 'title', and 'page' fields.",
+    "info_supported_formats": "💡 Supported formats: JPG, JPEG, PNG, GIF, BMP, WEBP",
+    "info_add_photos": "💡 Please add some photos to the directory. Supported formats: JPG, JPEG, PNG, GIF, BMP, WEBP",
+
+    "warning_no_data": "⚠️ No data available.",
+
+    "disclaimer_main": "Matsublogdotcom, mainly used for recommendation/data searching. Prediction on future formation and comments on members/songs/albums/goods are not included.",
+    "disclaimer_data": "All data used are from the internet. The content and data in this fan-made database are intended for informational and entertainment purposes only.",
+    "disclaimer_official": "They do not represent official statements, endorsements, or affiliations with Sakurazaka46, nor Matsuda Rina.",
+    "disclaimer_copyright": "All trademarks and copyrighted materials belong to their respective owners.",
+
+    "footer_dashboard": "📊 **Blog Timeline Dashboard**",
+    "footer_data_range": "Data range: {min_date} to {max_date}",
+    "footer_made_with": "Made with love and blessings",
+
+    "debug_info": "Debug info - please check your JSON file structure"
+  },
+
+  "ja": {
+    "page_title": "ブログ投稿タイムラインダッシュボード",
+    "main_header": "まつりブログ.com",
+    "language_toggle": "English",
+
+    "tab_timeline": "📈 タイムライン",
+    "tab_monthly": "📊 月次サマリー",
+    "tab_weekday": "🗓️ 曜日分析",
+    "tab_total": "📋 総データ",
+    "tab_photo": "📸 フォトギャラリー",
+    "tab_disclaimer": "⚠️ 免責事項",
+
+    "timeline_title": "📊 ブログタイムライン",
+    "timeline_x_label": "日付",
+    "timeline_y_label": "投稿数",
+    "timeline_hover_date": "日付:",
+    "timeline_hover_posts": "投稿:",
+
+    "monthly_title": "📅 月次ブログ投稿サマリー",
+    "monthly_x_label": "月",
+    "monthly_y_label": "投稿数",
+
+    "weekday_title": "📊 曜日別投稿",
+    "weekday_x_label": "曜日",
+    "weekday_y_label": "投稿数",
+
+    "metric_total_posts": "📚 総投稿数",
+    "metric_avg_posts": "📊 平均投稿数/日",
+    "metric_max_posts": "🔥 最大投稿数/日",
+    "top_active_days": "🔥 最も活発な10日間",
+
+    "column_date": "日付",
+    "column_posts": "投稿",
+    "column_month": "月",
+    "column_day": "曜日",
+    "column_percentage": "%",
+
+    "metric_total_blogs": "総ブログ数",
+    "metric_total_chars": "総文字数",
+    "metric_total_images": "総画像数",
+    "metric_avg_chars": "平均文字数/ブログ",
+    "metric_avg_images": "平均画像数/ブログ",
+
+    "button_shuffle": "🎲 ガチャガチャ！",
+
+    "error_no_data": "❌ データが読み込まれませんでした。'blog_data_scrape.json'が現在のディレクトリに存在することを確認してください。",
+    "error_directory_not_found": "❌ ディレクトリ '{folder}' が見つかりません。ディレクトリを作成して写真を追加してください。",
+    "error_no_images": "⚠️ '{folder}' ディレクトリに画像ファイルが見つかりません。",
+    "error_loading_image": "❌ {path} の読み込みエラー: {error}",
+    "error_json_not_found": "❌ blog_data.jsonファイルが見つかりません。最初にスクレイピングスクリプトを実行してください。",
+    "error_loading_data": "❌ データ読み込みエラー: {error}",
+    "error_json_list": "JSONデータが辞書ではなくリストです。JSON構造を確認してください。",
+    "error_unexpected": "❌ 予期しないエラー: {error}",
+
+    "info_json_structure": "💡 JSONファイルには'date'、'title'、'page'フィールドを含むブログデータが必要です。",
+    "info_supported_formats": "💡 サポート形式: JPG, JPEG, PNG, GIF, BMP, WEBP",
+    "info_add_photos": "💡 ディレクトリに写真を追加してください。サポート形式: JPG, JPEG, PNG, GIF, BMP, WEBP",
+
+    "warning_no_data": "⚠️ 利用可能なデータがありません。",
+
+    "disclaimer_main": "Matsublogdotcomは、主に推薦/データ検索に使用されます。将来のフォーメーションの予測やメンバー/楽曲/アルバム/グッズに関するコメントは含まれません。",
+    "disclaimer_data": "使用されるすべてのデータはインターネットからのものです。このファン制作データベースのコンテンツとデータは、情報提供と娯楽目的のみを意図しています。",
+    "disclaimer_official": "これらは櫻坂46や松田里奈との公式声明、承認、または提携を表すものではありません。",
+    "disclaimer_copyright": "すべての商標と著作権のある素材は、それぞれの所有者に帰属します。",
+
+    "footer_dashboard": "📊 **ブログタイムラインダッシュボード**",
+    "footer_data_range": "データ範囲: {min_date} から {max_date}",
+    "footer_made_with": "愛と祝福を込めて作成",
+
+    "debug_info": "デバッグ情報 - JSONファイル構造を確認してください"
+  }
+}

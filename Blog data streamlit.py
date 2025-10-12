@@ -2,23 +2,57 @@ import streamlit as st
 import pandas as pd
 import json
 import plotly.express as px
-# from streamlit_gsheets import GSheetsConnection
 import os
 from PIL import Image
 import random
 
+# Load translations
+@st.cache_data
+def load_translations():
+    """Load translations from JSON file"""
+    try:
+        with open('translations.json', 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        st.error("❌ translations.json file not found!")
+        return {"en": {}, "ja": {}}
+    except Exception as e:
+        st.error(f"❌ Error loading translations: {e}")
+        return {"en": {}, "ja": {}}
+
+def get_text(key, lang="en", **kwargs):
+    """Get translated text with optional formatting"""
+    translations = load_translations()
+    try:
+        text = translations[lang][key]
+        if kwargs:
+            return text.format(**kwargs)
+        return text
+    except KeyError:
+        # Fallback to English if translation not found
+        try:
+            text = translations["en"][key]
+            if kwargs:
+                return text.format(**kwargs)
+            return text
+        except KeyError:
+            return f"[Missing: {key}]"
+
+# Initialize language in session state
+if 'language' not in st.session_state:
+    st.session_state.language = 'en'
+
 # Set page config
 st.set_page_config(
-    page_title="Blog Posts Timeline Dashboard",
+    page_title=get_text("page_title", st.session_state.language),
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="collapsed"  # Changed to collapsed
+    initial_sidebar_state="collapsed"
 )
 
 # Custom CSS for better styling
 st.markdown("""
 <style>
-
     .main-header {
         font-size: 3rem;
         color: #1f77b4;
@@ -36,7 +70,6 @@ st.markdown("""
         border-left: 5px solid #1f77b4;
     }
 
-    /* Reduce space everywhere */
     .element-container {
         margin-bottom: 0.2rem !important;
     }
@@ -50,51 +83,43 @@ st.markdown("""
         padding-right: 20px;
     }
 
-
-    /* Target Streamlit tab indicator/underline */
     .stTabs [data-baseweb="tab-highlight"] {
         background-color: #28a745 !important;
     }
 
-        /* Active tab font color */
     .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
-        color: #90EE90 !important;  /* Light green for active tab */
+        color: #90EE90 !important;
     }
 
-    /* Inactive tab font color */
     .stTabs [data-baseweb="tab-list"] button {
-        color: #FFFFFF !important;  /* Pale green for inactive tabs */
+        color: #FFFFFF !important;
     }
 
-    /* More specific targeting */
     div[data-testid="stMultiSelect"] span[data-baseweb="tag"] {
         background-color: #28a745 !important;
         border-color: #28a745 !important;
     }
 
-
-}
-
+    .language-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 999;
+    }
 </style>
 """, unsafe_allow_html=True)
-
 
 @st.cache_data
 def load_blog_data():
     """Load and process blog data from JSON file"""
     try:
-        # Load from default file
         with open('blog_data_scrape.json', 'r', encoding='utf-8') as f:
             blog_data = json.load(f)
 
-        # Convert to DataFrame
         df = pd.DataFrame(blog_data)
-
-        # Parse dates
         df['datetime'] = pd.to_datetime(df['date'], format='%Y/%m/%d', errors='coerce')
-        df = df.dropna(subset=['datetime'])  # Remove rows with invalid dates
+        df = df.dropna(subset=['datetime'])
 
-        # Extract date components
         df['year'] = df['datetime'].dt.year
         df['month'] = df['datetime'].dt.month
         df['day'] = df['datetime'].dt.day
@@ -104,30 +129,14 @@ def load_blog_data():
 
         return df
     except Exception as e:
-        st.error(f"Error loading data: {e}")
+        st.error(get_text("error_loading_data", st.session_state.language, error=str(e)))
         return None
-
-
-@st.cache_data
-def load_google_sheets_data():
-    """Load data from Google Sheets"""
-    try:
-        conn = st.connection("gsheets", type=GSheetsConnection)
-        df = conn.read(
-            spreadsheet="https://docs.google.com/spreadsheets/d/1HQS04Y-e9hpYvDUOSSbOD-iAc0iLpo_Gks13DBWW3QY/edit?usp=sharing")
-        return df
-    except Exception as e:
-        st.error(f"Error loading Google Sheets data: {e}")
-        return None
-
 
 def create_daily_timeline(df):
     """Create daily timeline chart"""
-    # Group by date and count posts
     daily_counts = df.groupby('date_only').size().reset_index(name='post_count')
     daily_counts['date_only'] = pd.to_datetime(daily_counts['date_only'])
 
-    # Create a complete date range to show days with 0 posts
     date_range = pd.date_range(
         start=daily_counts['date_only'].min(),
         end=daily_counts['date_only'].max(),
@@ -140,97 +149,83 @@ def create_daily_timeline(df):
 
     return complete_timeline
 
-
-def create_timeline_chart(timeline_df):
-    """Create interactive timeline chart - always bar chart"""
+def create_timeline_chart(timeline_df, lang):
+    """Create interactive timeline chart"""
     fig = px.bar(
         timeline_df,
         x='date_only',
         y='post_count',
-        title="📊 Blog Timeline",
-        labels={'date_only': 'Date', 'post_count': 'Number of Posts'},
+        title=get_text("timeline_title", lang),
+        labels={
+            'date_only': get_text("timeline_x_label", lang),
+            'post_count': get_text("timeline_y_label", lang)
+        },
         color_discrete_sequence=['#E0E26A']
     )
 
-    # Apply black font to all text elements
     fig.update_layout(
-        font=dict(
-            family="Arial, sans-serif",
-            size=12,
-            color="black"  # This sets ALL text to black
-        ),
+        font=dict(family="Arial, sans-serif", size=12, color="black"),
         title_font_size=20,
         height=320,
         showlegend=False,
         hovermode='x unified',
         xaxis=dict(
-            title="Date",
+            title=get_text("timeline_x_label", lang),
             showgrid=True,
             gridwidth=1,
             gridcolor='rgba(0,0,0,0)'
         ),
         yaxis=dict(
-            title="Number of Posts",
+            title=get_text("timeline_y_label", lang),
             showgrid=True,
             gridwidth=1,
-            dtick=1,  # Added: Force integer ticks
+            dtick=1,
         ),
     )
 
-    # Add hover template
     fig.update_traces(
-        hovertemplate="<b>Date:</b> %{x}<br><b>Posts:</b> %{y}<extra></extra>"
+        hovertemplate=f"<b>{get_text('timeline_hover_date', lang)}</b> %{{x}}<br><b>{get_text('timeline_hover_posts', lang)}</b> %{{y}}<extra></extra>"
     )
 
     return fig
 
-
-def create_monthly_summary(df):
+def create_monthly_summary(df, lang):
     """Create monthly summary chart"""
     monthly_counts = df.groupby(['year', 'month_name']).size().reset_index(name='post_count')
 
-    # Create a proper month order for sorting
     month_order = ['January', 'February', 'March', 'April', 'May', 'June',
                    'July', 'August', 'September', 'October', 'November', 'December']
 
-    # Convert month_name to categorical with proper order
     monthly_counts['month_name'] = pd.Categorical(monthly_counts['month_name'],
                                                   categories=month_order,
                                                   ordered=True)
 
-    # Sort by year and month chronologically
     monthly_counts = monthly_counts.sort_values(['year', 'month_name'])
-
-    # Create year_month for display AFTER sorting
     monthly_counts['year_month'] = monthly_counts['year'].astype(str) + ' ' + monthly_counts['month_name'].astype(str)
 
     fig = px.bar(
         monthly_counts,
         x='year_month',
         y='post_count',
-        title="📅 Monthly Blog Posts Summary",
-        labels={'year_month': 'Month', 'post_count': 'Number of Posts'},
+        title=get_text("monthly_title", lang),
+        labels={
+            'year_month': get_text("monthly_x_label", lang),
+            'post_count': get_text("monthly_y_label", lang)
+        },
         color='post_count',
         color_continuous_scale=[[0, '#013220'], [0.5, '#7CB342'], [1, '#FFF176']]
-        # Very dark green → Light green → Light yellow
-
     )
 
-    # Use update_xaxes() instead of update_xaxis()
     fig.update_xaxes(
         categoryorder='array',
         categoryarray=monthly_counts['year_month'].tolist(),
         tickangle=-45
     )
 
-    fig.update_layout(
-        height=350
-    )
-
+    fig.update_layout(height=350)
     return fig
 
-
-def create_weekday_analysis(df):
+def create_weekday_analysis(df, lang):
     """Create weekday analysis chart"""
     weekday_counts = df['weekday'].value_counts()
     weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -239,255 +234,165 @@ def create_weekday_analysis(df):
     fig = px.bar(
         x=weekday_counts.index,
         y=weekday_counts.values,
-        title="📊 Posts by Day of Week",
-        labels={'x': 'Day of Week', 'y': 'Number of Posts'},
+        title=get_text("weekday_title", lang),
+        labels={
+            'x': get_text("weekday_x_label", lang),
+            'y': get_text("weekday_y_label", lang)
+        },
         color=weekday_counts.values,
         color_continuous_scale=[[0, '#013220'], [0.5, '#7CB342'], [1, '#FFF176']]
     )
 
     fig.update_layout(height=320)
-
     return fig
 
 
 def main():
-    # Header
-    st.markdown('<h1 class="main-header">Matsuri-blog.com</h1>',
-                unsafe_allow_html=True)
+    # Header with language toggle button in same line
+    col1, col2, col3 = st.columns([1, 6, 1])
+
+    with col2:
+        st.markdown(f'<h1 class="main-header">{get_text("main_header", st.session_state.language)}</h1>',
+                    unsafe_allow_html=True)
+
+    with col3:
+        st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)  # Align with header
+        if st.button(get_text("language_toggle", st.session_state.language)):
+            st.session_state.language = 'ja' if st.session_state.language == 'en' else 'en'
+            st.rerun()
 
     # Load data
     df = load_blog_data()
 
     if df is None or df.empty:
-        st.error(
-            "❌ No data loaded. Please ensure 'blog_data_scrape.json' exists in the current directory.")
-        st.info("💡 The JSON file should contain blog data with 'date', 'title', and 'page' fields.")
+        st.error(get_text("error_no_data", st.session_state.language))
+        st.info(get_text("info_json_structure", st.session_state.language))
         return
 
-    # Use the full dataset (no filtering)
     df_filtered = df
 
-    # Main dashboard
     if df_filtered.empty:
-        st.warning("⚠️ No data available.")
+        st.warning(get_text("warning_no_data", st.session_state.language))
         return
 
-    # Create timeline
     timeline_df = create_daily_timeline(df_filtered)
 
+    # Tabs with translations
     tab1, tab2, tab3, tab5, tab7, tab8 = st.tabs([
-        "📈 Timeline", "📊 Monthly Summary",
-        "🗓️ Weekday Analysis", "📋 Total data", "📸 Photo Gallery", "⚠️ Disclaimer"
+        get_text("tab_timeline", st.session_state.language),
+        get_text("tab_monthly", st.session_state.language),
+        get_text("tab_weekday", st.session_state.language),
+        get_text("tab_total", st.session_state.language),
+        get_text("tab_photo", st.session_state.language),
+        get_text("tab_disclaimer", st.session_state.language)
     ])
 
     with tab1:
-        # Timeline chart (always bar chart)
-        timeline_fig = create_timeline_chart(timeline_df)
+        timeline_fig = create_timeline_chart(timeline_df, st.session_state.language)
         st.plotly_chart(timeline_fig, use_container_width=True)
 
-        # Key metrics
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
             st.metric(
-                label="📚 Total Posts",
+                label=get_text("metric_total_posts", st.session_state.language),
                 value=len(df_filtered)
             )
 
         with col3:
             avg_posts = len(df_filtered) / df_filtered['date_only'].nunique()
             st.metric(
-                label="📊 Avg Posts/Day",
+                label=get_text("metric_avg_posts", st.session_state.language),
                 value=f"{avg_posts:.1f}"
             )
 
         with col4:
             max_posts = df_filtered.groupby('date_only').size().max()
             st.metric(
-                label="🔥 Max Posts/Day",
+                label=get_text("metric_max_posts", st.session_state.language),
                 value=max_posts
             )
 
-        # Additional timeline statistics
         col1, col2 = st.columns(2)
-
-        with col1:
-            max_day = timeline_df.loc[timeline_df['post_count'].idxmax(), 'date_only'].strftime('%Y-%m-%d')
-
         with col2:
-            st.subheader("🔥 Top 10 Most Active Days")
+            st.subheader(get_text("top_active_days", st.session_state.language))
             top_days = timeline_df.nlargest(10, 'post_count')[['date_only', 'post_count']]
             top_days['date_only'] = top_days['date_only'].dt.strftime('%Y-%m-%d')
-            top_days.columns = ['Date', 'Posts']
+            top_days.columns = [
+                get_text("column_date", st.session_state.language),
+                get_text("column_posts", st.session_state.language)
+            ]
             st.dataframe(top_days, hide_index=True)
 
     with tab2:
-        monthly_fig = create_monthly_summary(df_filtered)
+        monthly_fig = create_monthly_summary(df_filtered, st.session_state.language)
         st.plotly_chart(monthly_fig, use_container_width=True)
 
-        # Monthly statistics table
         monthly_stats = df_filtered.groupby(['year', 'month_name']).size().reset_index(name='post_count')
         monthly_stats['year_month'] = monthly_stats['year'].astype(str) + ' ' + monthly_stats['month_name']
         monthly_stats = monthly_stats[['year_month', 'post_count']].sort_values('post_count', ascending=False)
-        monthly_stats.columns = ['Month', 'Posts']
-
+        monthly_stats.columns = [
+            get_text("column_month", st.session_state.language),
+            get_text("column_posts", st.session_state.language)
+        ]
         st.dataframe(monthly_stats, hide_index=True)
 
     with tab3:
-        weekday_fig = create_weekday_analysis(df_filtered)
+        weekday_fig = create_weekday_analysis(df_filtered, st.session_state.language)
         st.plotly_chart(weekday_fig, use_container_width=True)
 
-        # Weekday statistics
         weekday_stats = df_filtered['weekday'].value_counts()
         weekday_df = pd.DataFrame({
-            'Day': weekday_stats.index,
-            'Posts': weekday_stats.values,
-            '%': (weekday_stats.values / len(df_filtered) * 100).round(1)
+            get_text("column_day", st.session_state.language): weekday_stats.index,
+            get_text("column_posts", st.session_state.language): weekday_stats.values,
+            get_text("column_percentage", st.session_state.language): (weekday_stats.values / len(df_filtered) * 100).round(1)
         })
-
         st.dataframe(weekday_df, hide_index=True)
 
-    # with tab4:
-    #     # Search functionality
-    #     search_term = st.text_input("🔍 Search in titles:")
-    #
-    #     if search_term:
-    #         mask = df_filtered['title'].str.contains(search_term, case=False, na=False)
-    #         display_df = df_filtered[mask]
-    #     else:
-    #         display_df = df_filtered
-    #
-    #     # Display options
-    #     col1, col2 = st.columns(2)
-    #     with col1:
-    #         show_columns = st.multiselect(
-    #             "Select columns to display:",
-    #             options=['date', 'title', 'page', 'href', 'weekday', 'month_name'],
-    #             default=['date', 'title', 'page', 'href']
-    #         )
-    #
-    #     with col2:
-    #         rows_to_show = st.selectbox(
-    #             "Rows to display:",
-    #             options=[10, 25, 50, 100, len(df)],
-    #             index=1
-    #         )
-    #
-    #     # Display filtered data
-    #     if show_columns:
-    #         st.dataframe(
-    #             display_df[show_columns].head(rows_to_show),
-    #             hide_index=True,
-    #             use_container_width=True
-    #         )
-
     with tab5:
-
         try:
-            # Load and display JSON data
             with open("blog_data_counts.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            # Check if data is a list instead of dict
             if isinstance(data, list):
-                st.error("JSON data is a list, not a dictionary. Please check your JSON structure.")
-                st.json(data[:2])  # Show first 2 items
+                st.error(get_text("error_json_list", st.session_state.language))
+                st.json(data[:2])
             else:
-                # Display summary statistics
                 col1, col2, col3, col4 = st.columns(4)
 
                 with col1:
-                    st.metric("total blogs count", data.get("total_blogs", "N/A"))
+                    st.metric(get_text("metric_total_blogs", st.session_state.language), data.get("total_blogs", "N/A"))
 
                 with col2:
-                    st.metric("total characters", f"{data.get('total_characters', 0):,}")
+                    st.metric(get_text("metric_total_chars", st.session_state.language), f"{data.get('total_characters', 0):,}")
 
                 with col3:
-                    st.metric("total images", f"{data.get('total_images', 0):,}")
+                    st.metric(get_text("metric_total_images", st.session_state.language), f"{data.get('total_images', 0):,}")
 
-                # Display averages
                 col5, col6 = st.columns(2)
                 with col5:
                     avg_chars = data.get('average_characters', 0)
-                    st.metric("Avg Characters/Blog", f"{avg_chars:.1f}")
+                    st.metric(get_text("metric_avg_chars", st.session_state.language), f"{avg_chars:.1f}")
                 with col6:
                     avg_images = data.get('average_images', 0)
-                    st.metric("Avg Images/Blog", f"{avg_images:.1f}")
+                    st.metric(get_text("metric_avg_images", st.session_state.language), f"{avg_images:.1f}")
 
         except FileNotFoundError:
-            st.error("❌ blog_data.json file not found. Please run the scraping script first.")
+            st.error(get_text("error_json_not_found", st.session_state.language))
         except Exception as e:
-            st.error(f"❌ Error loading data: {e}")
-            st.write("Debug info - please check your JSON file structure")
-
-    # with tab6:
-    #
-    #     # Add refresh button
-    #     if st.button("🔄 Refresh"):
-    #         st.cache_data.clear()
-    #
-    #     # Load and display Google Sheets data
-    #     sheets_df = load_google_sheets_data()
-    #
-    #     if sheets_df is not None:
-    #         # Search functionality for Google Sheets data
-    #         search_term_sheets = st.text_input("🔍 Search in data:")
-    #
-    #         if search_term_sheets:
-    #             # Search across all string columns
-    #             string_columns = sheets_df.select_dtypes(include=['object']).columns
-    #             mask = sheets_df[string_columns].apply(
-    #                 lambda x: x.astype(str).str.contains(search_term_sheets, case=False, na=False)
-    #             ).any(axis=1)
-    #             display_sheets_df = sheets_df[mask]
-    #         else:
-    #             display_sheets_df = sheets_df
-    #
-    #         # Display options
-    #         col1, col2 = st.columns(2)
-    #         with col1:
-    #             if len(sheets_df.columns) > 0:
-    #                 show_columns_sheets = st.multiselect(
-    #                     "Select columns to display:",
-    #                     options=list(sheets_df.columns),
-    #                     default=list(sheets_df.columns)[:5] if len(sheets_df.columns) >= 5 else list(sheets_df.columns)
-    #                 )
-    #             else:
-    #                 show_columns_sheets = []
-    #
-    #         with col2:
-    #             rows_to_show_sheets = st.selectbox(
-    #                 "Rows to display:",
-    #                 options=[10, 25, 50, 100, len(display_sheets_df)],
-    #                 index=1,
-    #                 key="sheets_rows"
-    #             )
-    #
-    #         # Display the data
-    #         if show_columns_sheets:
-    #             st.dataframe(
-    #                 display_sheets_df[show_columns_sheets].head(rows_to_show_sheets),
-    #                 hide_index=True,
-    #                 use_container_width=True
-    #             )
-    #
-    #         else:
-    #             st.warning("Please select at least one column to display.")
-    #     else:
-    #         st.error("❌ Failed to load Google Sheets data. Please check your connection and permissions.")
+            st.error(get_text("error_loading_data", st.session_state.language, error=str(e)))
+            st.write(get_text("debug_info", st.session_state.language))
 
     with tab7:
         display_mode = "Grid View"
         photo_folder = "matsuri_blog_photo"
 
         try:
-            # Check if directory exists
             if not os.path.exists(photo_folder):
-                st.error(f"❌ Directory '{photo_folder}' not found. Please create the directory and add some photos.")
-                st.info("💡 Supported formats: JPG, JPEG, PNG, GIF, BMP, WEBP")
+                st.error(get_text("error_directory_not_found", st.session_state.language, folder=photo_folder))
+                st.info(get_text("info_supported_formats", st.session_state.language))
                 return
 
-            # Get all image files
             supported_formats = ('.jpg')
             image_files = []
 
@@ -496,62 +401,49 @@ def main():
                     image_files.append(os.path.join(photo_folder, file))
 
             if not image_files:
-                st.warning(f"⚠️ No image files found in '{photo_folder}' directory.")
-                st.info("💡 Please add some photos to the directory. Supported formats: JPG, JPEG, PNG, GIF, BMP, WEBP")
+                st.warning(get_text("error_no_images", st.session_state.language, folder=photo_folder))
+                st.info(get_text("info_add_photos", st.session_state.language))
                 return
 
-            # Shuffle/randomize options
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("🎲 Shuffle Photos"):
+                if st.button(get_text("button_shuffle", st.session_state.language)):
                     if 'shuffled_images' not in st.session_state:
                         st.session_state.shuffled_images = image_files.copy()
                     random.shuffle(st.session_state.shuffled_images)
                     st.rerun()
 
-            with col2:
-                photos_per_row = 5
-
-            # Use shuffled images if available, otherwise use original list
             display_images = st.session_state.get('shuffled_images', image_files)
             display_images = display_images[:20]
 
-            # Display modes
             if display_mode == "Grid View":
-                # Grid layout
-                cols = st.columns(photos_per_row)
+                cols = st.columns(5)
                 for idx, image_path in enumerate(display_images):
-                    with cols[idx % photos_per_row]:
+                    with cols[idx % 5]:
                         try:
                             image = Image.open(image_path)
                             st.image(image, use_container_width=True)
-
                         except Exception as e:
-                            st.error(f"❌ Error loading {image_path}: {e}")
+                            st.error(get_text("error_loading_image", st.session_state.language, path=image_path, error=str(e)))
 
         except Exception as e:
-            st.error(f"❌ Unexpected error: {e}")
+            st.error(get_text("error_unexpected", st.session_state.language, error=str(e)))
 
     with tab8:
-        # Main disclaimer content
-        st.write(
-            "Matsublogdotcom, mainly used for recommendation/data searching. Prediction on future formation and comments on members/songs/albums/goods are not included. ")
-        st.write(
-            "All data used are from the internet. The content and data in this fan-made database are intended for informational and entertainment purposes only. ")
-        st.write(
-            "They do not represent official statements, endorsements, or affiliations with Sakurazaka46, nor Matsuda Rina. ")
-        st.write("All trademarks and copyrighted materials belong to their respective owners. ")
+        st.write(get_text("disclaimer_main", st.session_state.language))
+        st.write(get_text("disclaimer_data", st.session_state.language))
+        st.write(get_text("disclaimer_official", st.session_state.language))
+        st.write(get_text("disclaimer_copyright", st.session_state.language))
 
     # Footer
     min_date = df['datetime'].min().date()
     max_date = df['datetime'].max().date()
     st.markdown("---")
     st.markdown(
-        "📊 **Blog Timeline Dashboard** | "
-        f"Data range: {min_date} to {max_date} "
-        "| Made with love and blessings"
+        f"{get_text('footer_dashboard', st.session_state.language)} | "
+        f"{get_text('footer_data_range', st.session_state.language, min_date=min_date, max_date=max_date)} "
+        f"| {get_text('footer_made_with', st.session_state.language)}"
     )
-
 
 if __name__ == "__main__":
     main()
