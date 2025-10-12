@@ -8,17 +8,30 @@ import random
 
 # Load translations
 @st.cache_data
+# Add this temporary debug code after the load_translations function
 def load_translations():
     """Load translations from JSON file"""
+    import os
+
+    # Debug: Check if file exists
+    if not os.path.exists('translations.json'):
+        st.error("❌ translations.json file not found in current directory!")
+        st.write(f"Current directory: {os.getcwd()}")
+        st.write(f"Files in directory: {os.listdir('.')}")
+        return {"en": {}, "ja": {}}
+
     try:
         with open('translations.json', 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        st.error("❌ translations.json file not found!")
+            data = json.load(f)
+            st.success("✅ translations.json loaded successfully!")
+            return data
+    except json.JSONDecodeError as e:
+        st.error(f"❌ JSON format error: {e}")
         return {"en": {}, "ja": {}}
     except Exception as e:
         st.error(f"❌ Error loading translations: {e}")
         return {"en": {}, "ja": {}}
+
 
 def get_text(key, lang="en", **kwargs):
     """Get translated text with optional formatting"""
