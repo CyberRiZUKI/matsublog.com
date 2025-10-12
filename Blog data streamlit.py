@@ -10,8 +10,10 @@ import random
 @st.cache_data
 def load_translations():
     """Load translations from JSON file"""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    translations_path = os.path.join(script_dir, 'translations.json')
     try:
-        with open('translations.json', 'r', encoding='utf-8') as f:
+        with open(translations_path, 'r', encoding='utf-8') as f:
             return json.load(f)
     except FileNotFoundError:
         st.error("❌ translations.json file not found!")
