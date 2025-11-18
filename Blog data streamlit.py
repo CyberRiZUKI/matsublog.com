@@ -12,6 +12,13 @@ import base64
 # Get the directory where this script is located
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+st.markdown("""
+<script>
+    var elements = window.parent.document.querySelectorAll('.stApp');
+    elements[0].classList.add('dark-theme');
+</script>
+""", unsafe_allow_html=True)
+
 
 # Load translations
 @st.cache_data
