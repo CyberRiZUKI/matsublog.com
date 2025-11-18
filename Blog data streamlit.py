@@ -5,13 +5,19 @@ import plotly.express as px
 import os
 from PIL import Image
 import random
+import folium
+from streamlit_folium import st_folium
+import base64
+
+# Get the directory where this script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 # Load translations
 @st.cache_data
 def load_translations():
     """Load translations from JSON file"""
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    translations_path = os.path.join(script_dir, 'translations.json')
+    translations_path = os.path.join(SCRIPT_DIR, 'translations.json')
     try:
         with open(translations_path, 'r', encoding='utf-8') as f:
             return json.load(f)
@@ -40,6 +46,7 @@ def get_text(key, lang="en", **kwargs):
             return text
         except KeyError:
             return f"[Missing: {key}]"
+
 
 # Initialize language in session state
 if 'language' not in st.session_state:
@@ -112,11 +119,16 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Photo folder path
+PHOTO_FOLDER = os.path.join(SCRIPT_DIR, 'matsuri_pb_photo')
+
+
 @st.cache_data
 def load_blog_data():
     """Load and process blog data from JSON file"""
     try:
-        with open('blog_data_scrape.json', 'r', encoding='utf-8') as f:
+        blog_data_path = os.path.join(SCRIPT_DIR, 'blog_data_scrape.json')
+        with open(blog_data_path, 'r', encoding='utf-8') as f:
             blog_data = json.load(f)
 
         df = pd.DataFrame(blog_data)
@@ -135,6 +147,21 @@ def load_blog_data():
         st.error(get_text("error_loading_data", st.session_state.language, error=str(e)))
         return None
 
+
+@st.cache_data
+def load_locations():
+    """Load locations data for map"""
+    locations_path = os.path.join(SCRIPT_DIR, 'locations.json')
+    with open(locations_path, 'r') as f:
+        return json.load(f)
+
+
+def image_to_base64(img_path):
+    """Convert image to base64 string"""
+    with open(img_path, 'rb') as img_file:
+        return base64.b64encode(img_file.read()).decode()
+
+
 def create_daily_timeline(df):
     """Create daily timeline chart"""
     daily_counts = df.groupby('date_only').size().reset_index(name='post_count')
@@ -151,6 +178,7 @@ def create_daily_timeline(df):
     complete_timeline['post_count'] = complete_timeline['post_count'].fillna(0)
 
     return complete_timeline
+
 
 def create_timeline_chart(timeline_df, lang):
     """Create interactive timeline chart"""
@@ -192,6 +220,7 @@ def create_timeline_chart(timeline_df, lang):
 
     return fig
 
+
 def create_monthly_summary(df, lang):
     """Create monthly summary chart"""
     monthly_counts = df.groupby(['year', 'month_name']).size().reset_index(name='post_count')
@@ -227,6 +256,7 @@ def create_monthly_summary(df, lang):
 
     fig.update_layout(height=350)
     return fig
+
 
 def create_weekday_analysis(df, lang):
     """Create weekday analysis chart"""
@@ -280,13 +310,14 @@ def main():
 
     timeline_df = create_daily_timeline(df_filtered)
 
-    # Tabs with translations
-    tab1, tab2, tab3, tab5, tab7, tab8 = st.tabs([
+    # Tabs with translations - Added tab_map before tab_disclaimer
+    tab1, tab2, tab3, tab5, tab7, tab_map, tab8 = st.tabs([
         get_text("tab_timeline", st.session_state.language),
         get_text("tab_monthly", st.session_state.language),
         get_text("tab_weekday", st.session_state.language),
         get_text("tab_total", st.session_state.language),
         get_text("tab_photo", st.session_state.language),
+        "🗺️ PHOTOBOOK MAP SP",  # New Map tab before disclaimer
         get_text("tab_disclaimer", st.session_state.language)
     ])
 
@@ -348,13 +379,15 @@ def main():
         weekday_df = pd.DataFrame({
             get_text("column_day", st.session_state.language): weekday_stats.index,
             get_text("column_posts", st.session_state.language): weekday_stats.values,
-            get_text("column_percentage", st.session_state.language): (weekday_stats.values / len(df_filtered) * 100).round(1)
+            get_text("column_percentage", st.session_state.language): (
+                        weekday_stats.values / len(df_filtered) * 100).round(1)
         })
         st.dataframe(weekday_df, hide_index=True)
 
     with tab5:
         try:
-            with open("blog_data_counts.json", "r", encoding="utf-8") as f:
+            counts_path = os.path.join(SCRIPT_DIR, "blog_data_counts.json")
+            with open(counts_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             if isinstance(data, list):
@@ -367,10 +400,12 @@ def main():
                     st.metric(get_text("metric_total_blogs", st.session_state.language), data.get("total_blogs", "N/A"))
 
                 with col2:
-                    st.metric(get_text("metric_total_chars", st.session_state.language), f"{data.get('total_characters', 0):,}")
+                    st.metric(get_text("metric_total_chars", st.session_state.language),
+                              f"{data.get('total_characters', 0):,}")
 
                 with col3:
-                    st.metric(get_text("metric_total_images", st.session_state.language), f"{data.get('total_images', 0):,}")
+                    st.metric(get_text("metric_total_images", st.session_state.language),
+                              f"{data.get('total_images', 0):,}")
 
                 col5, col6 = st.columns(2)
                 with col5:
@@ -388,7 +423,7 @@ def main():
 
     with tab7:
         display_mode = "Grid View"
-        photo_folder = "matsuri_blog_photo"
+        photo_folder = os.path.join(SCRIPT_DIR, "matsuri_blog_photo")
 
         try:
             if not os.path.exists(photo_folder):
@@ -427,10 +462,112 @@ def main():
                             image = Image.open(image_path)
                             st.image(image, use_container_width=True)
                         except Exception as e:
-                            st.error(get_text("error_loading_image", st.session_state.language, path=image_path, error=str(e)))
+                            st.error(get_text("error_loading_image", st.session_state.language, path=image_path,
+                                              error=str(e)))
 
         except Exception as e:
             st.error(get_text("error_unexpected", st.session_state.language, error=str(e)))
+
+    # ===== NEW MAP TAB (before disclaimer) =====
+    with tab_map:
+        # Google Maps link button
+        col1, col3 = st.columns([4, 2])
+
+        with col1:
+            col_title, col_button = st.columns([3, 1])
+            with col_title:
+                st.subheader("Location map for the 1st Photobook")
+            with col_button:
+                st.markdown("<div style='margin-top: 0.1rem;'></div>", unsafe_allow_html=True)
+                if st.link_button("🔗 Google Maps", "https://maps.app.goo.gl/tQ45ZPTU6xyDZM8a6"):
+                    pass
+
+            data = load_locations()
+
+            avg_lat = sum(loc['lat'] for loc in data['locations']) / len(data['locations'])
+            avg_lon = sum(loc['lon'] for loc in data['locations']) / len(data['locations'])
+
+            m = folium.Map(location=[avg_lat, avg_lon], zoom_start=12)
+
+            for location in data['locations']:
+                # Create popup HTML with embedded image
+                popup_html = f"""
+                <div style="width: 300px;">
+                    <h4 style="margin-bottom: 10px;">{location['name']}</h4>
+                    <p style="margin-bottom: 10px;">{location['description']}</p>
+                """
+
+                # Add images to popup
+                if 'images' in location and location['images']:
+                    for img_filename in location['images'][:1]:
+                        img_path = os.path.join(PHOTO_FOLDER, img_filename)
+                        if os.path.exists(img_path):
+                            img_base64 = image_to_base64(img_path)
+                            popup_html += f"""
+                            <img src="data:image/jpeg;base64,{img_base64}" 
+                                 style="width: 100%; margin-bottom: 5px; border-radius: 5px;">
+                            """
+
+                popup_html += "</div>"
+
+                # Create tooltip with image
+                tooltip_html = f"""
+                <div style="width: 250px; font-family: Arial, sans-serif;">
+                """
+
+                # Add second image to tooltip if available
+                if 'images' in location and location['images']:
+                    img_path = os.path.join(PHOTO_FOLDER, location['images'][1])
+                    if os.path.exists(img_path):
+                        img_base64 = image_to_base64(img_path)
+                        tooltip_html += f"""
+                        <img src="data:image/jpeg;base64,{img_base64}" 
+                             style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; margin-bottom: 8px;">
+                        """
+
+                # Create popup with custom size
+                popup = folium.Popup(popup_html, max_width=320)
+
+                folium.Marker(
+                    [location['lat'], location['lon']],
+                    popup=popup,
+                    tooltip=folium.Tooltip(tooltip_html),
+                    icon=folium.Icon(color=location['color'], icon=location['icon'])
+                ).add_to(m)
+
+            map_data = st_folium(m, width=None, height=700, key="map")
+
+        # Find clicked location
+        clicked_location = None
+        if map_data and map_data.get('last_object_clicked'):
+            clicked_lat = map_data['last_object_clicked']['lat']
+            clicked_lon = map_data['last_object_clicked']['lng']
+
+            # Find matching location (with small tolerance for floating point comparison)
+            for location in data['locations']:
+                if abs(location['lat'] - clicked_lat) < 0.0001 and abs(location['lon'] - clicked_lon) < 0.0001:
+                    clicked_location = location
+                    break
+
+        with col3:
+            st.subheader("📸 Photos")
+
+            if clicked_location:
+                st.markdown(f"**{clicked_location['name']}**")
+
+                if 'images' in clicked_location and clicked_location['images']:
+                    for j, img_filename in enumerate(clicked_location['images'], 1):
+                        img_path = os.path.join(PHOTO_FOLDER, img_filename)
+
+                        if os.path.exists(img_path):
+                            st.image(img_path, caption=f"Photo {j}", use_container_width=True)
+                        else:
+                            st.warning(f"Image not found: {img_filename}")
+                else:
+                    st.info("No images available for this location")
+            else:
+                st.info("👆 Click on a marker to see photos")
+    # ===== END MAP TAB =====
 
     with tab8:
         st.write(get_text("disclaimer_main", st.session_state.language))
@@ -447,6 +584,7 @@ def main():
         f"{get_text('footer_data_range', st.session_state.language, min_date=min_date, max_date=max_date)} "
         f"| {get_text('footer_made_with', st.session_state.language)}"
     )
+
 
 if __name__ == "__main__":
     main()

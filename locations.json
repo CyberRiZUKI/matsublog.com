@@ -1,0 +1,29 @@
+{
+  "locations": [
+    {
+      "name": "Woolworths Grey Lynn",
+      "lat": -36.8538778,
+      "lon": 174.7314193,
+      "description": "271 Richmond Road, Grey Lynn, Auckland 1022",
+      "color": "red",
+      "icon": "shopping-cart",
+      "images": [
+        "supermarket00.jpg",
+        "supermarket01.jpg"
+      ]
+    },
+    {
+      "name": "Dear Deer Coffee Roasting Bar Ellerslie",
+      "lat": -36.8973686,
+      "lon": 174.809275,
+      "description": "Shop3/120 Main Highway, Ellerslie, Auckland 1051",
+      "color": "blue",
+      "icon": "coffee",
+      "images": [
+        "coffee00.jpg",
+        "coffee01.jpg",
+        "coffee02.jpg"
+      ]
+    }
+  ]
+}
