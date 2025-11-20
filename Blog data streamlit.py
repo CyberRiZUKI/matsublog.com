@@ -475,7 +475,6 @@ def main():
         except Exception as e:
             st.error(get_text("error_unexpected", st.session_state.language, error=str(e)))
 
-    # ===== NEW MAP TAB (before disclaimer) =====
     with tab_map:
         # Google Maps link button
         col1, col3 = st.columns([4, 2])
@@ -516,20 +515,19 @@ def main():
                             """
 
                 popup_html += "</div>"
+                popup_html += "</div>"
 
                 # Create tooltip with image
                 tooltip_html = f"""
-                <div style="width: 250px; font-family: Arial, sans-serif;">
+                <div style="width: 250px; font-family: Arial, sans-serif; position: relative; z-index: 9999 !important;">
                 """
-
-                # Add second image to tooltip if available
                 if 'images' in location and location['images']:
                     img_path = os.path.join(PHOTO_FOLDER, location['images'][1])
                     if os.path.exists(img_path):
                         img_base64 = image_to_base64(img_path)
                         tooltip_html += f"""
                         <img src="data:image/jpeg;base64,{img_base64}" 
-                             style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; margin-bottom: 8px;">
+                             style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; margin-bottom: 8px; position: relative; z-index: 9999 !important;">
                         """
 
                 # Create popup with custom size
@@ -574,7 +572,6 @@ def main():
                     st.info("No images available for this location")
             else:
                 st.info("👆 Click on a marker to see photos")
-    # ===== END MAP TAB =====
 
     with tab8:
         st.write(get_text("disclaimer_main", st.session_state.language))
